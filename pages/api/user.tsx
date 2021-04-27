@@ -11,7 +11,13 @@ interface SuccessResponseProp {
   name: string;
   email: string;
   cellphone: string;
-  teacher: string;
+  teacher: true;
+  coins: 1;
+  courses: string[];
+  available_hours: object;
+  available_location: string[];
+  reviews: object[];
+  appointments: object[];
 }
 
 export default async (
