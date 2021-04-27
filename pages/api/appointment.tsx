@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import { getSession } from 'next-auth/client';
 import { ObjectID } from 'mongodb';
 import connect from '../../utils/database';
 
@@ -22,6 +23,12 @@ export default async (
   res: NextApiResponse<ErrorResponseProp | SuccessResponseProp>
 ): Promise<void> => {
   if (req.method === 'POST') {
+    const session = await getSession({ req });
+
+    if (!session) {
+      res.status(404).json({ error: 'Please login first' });
+      return;
+    }
     const {
       date,
       teacher_name,
