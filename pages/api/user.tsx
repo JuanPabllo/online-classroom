@@ -77,7 +77,7 @@ export default async (
     const response = await db.collection('users').findOne({ email });
 
     if (!response) {
-      res.status(404).json({ error: 'E-mail not found' });
+      res.status(404).json({ error: 'User with this e-mail not found' });
       return;
     }
 
