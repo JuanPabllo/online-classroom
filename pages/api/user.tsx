@@ -18,11 +18,34 @@ export default async (
   res: NextApiResponse<ErrorResponseProp | SuccessResponseProp>
 ): Promise<void> => {
   if (req.method === 'POST') {
-    const { name, email, cellphone, teacher } = req.body;
+    const {
+      name,
+      email,
+      cellphone,
+      teacher,
+      courses,
+      available_hours,
+      available_location,
+    } = req.body;
 
-    if (!name || !email || !cellphone || !teacher) {
-      res.status(400).json({ error: 'Missing body parameter' });
-      return;
+    if (!teacher) {
+      if (!name || !email || !cellphone) {
+        res.status(400).json({ error: 'Missing body parameter' });
+        return;
+      }
+    } else if (teacher) {
+      if (
+        !name ||
+        !email ||
+        !cellphone ||
+        !teacher ||
+        !courses ||
+        !available_hours ||
+        !available_location
+      ) {
+        res.status(400).json({ error: 'Missing body parameter' });
+        return;
+      }
     }
 
     const { db } = await connect();
@@ -32,6 +55,12 @@ export default async (
       email,
       cellphone,
       teacher,
+      coins: 1,
+      courses: courses || [],
+      available_hours: available_hours || {},
+      available_location: available_location || [],
+      reviews: [],
+      appointments: [],
     });
 
     res.status(200).json(response.ops[0]);
