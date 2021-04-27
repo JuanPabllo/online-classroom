@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import { rmdirSync } from 'node:fs';
 import connect from '../../utils/database';
 
 interface ErrorResponseProp {
@@ -64,6 +65,23 @@ export default async (
     });
 
     res.status(200).json(response.ops[0]);
+  } else if (req.method === 'GET') {
+    const { email } = req.body;
+    if (!email) {
+      res.status(404).json({ error: 'Missing e-mail on request body' });
+      return;
+    }
+
+    const { db } = await connect();
+
+    const response = await db.collection('users').findOne({ email });
+
+    if (!response) {
+      res.status(404).json({ error: 'E-mail not found' });
+      return;
+    }
+
+    res.status(200).json(response);
   } else {
     res.status(400).json({ error: 'Wrong request method' });
   }
