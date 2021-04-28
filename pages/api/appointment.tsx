@@ -3,6 +3,20 @@ import { getSession } from 'next-auth/client';
 import { ObjectID } from 'mongodb';
 import connect from '../../utils/database';
 
+interface User {
+  name: string;
+  email: string;
+  cellphone: string;
+  teacher: boolean;
+  coins: number;
+  courses: string[];
+  available_hours: Record<string, number[]>;
+  available_location: string[];
+  reviews: Record<string, unknown>[];
+  appointments: { date: string }[];
+  _id: string;
+}
+
 interface ErrorResponseProp {
   error: string;
 }
@@ -38,6 +52,15 @@ export default async (
       course,
       location,
       appointment_link,
+    }: {
+      date: string;
+      teacher_name: string;
+      teacher_id: string;
+      student_name: string;
+      student_id: string;
+      course: string;
+      location: string;
+      appointment_link: string;
     } = req.body;
     if (
       !date ||
@@ -87,18 +110,20 @@ export default async (
       appointment_link: appointment_link || '',
     };
 
+    // update teacher appointments
     await db
       .collection('users')
       .updateOne(
         { _id: new ObjectID(teacher_id) },
-        { $push: { appointment: appointment } }
+        { $push: { appointment: appointment }, $inc: { coins: 1 } }
       );
 
+    // update student appointments
     await db
       .collection('users')
       .updateOne(
         { _id: new ObjectID(student_id) },
-        { $push: { appointment: appointment } }
+        { $push: { appointment: appointment }, $inc: { coins: -1 } }
       );
 
     res.status(200).json(appointment);
