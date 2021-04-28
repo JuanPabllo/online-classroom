@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import connect from '../../utils/database';
+import connect from '../../../utils/database';
 
 interface ErrorResponseType {
   error: string;

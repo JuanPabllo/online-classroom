@@ -1,29 +1,37 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { rmdirSync } from 'node:fs';
 import connect from '../../utils/database';
 
-interface ErrorResponseProp {
+interface IAvailableHours {
+  monday: number[];
+  tuesday: number[];
+  wednesday: number[];
+  thursday: number[];
+  friday: number[];
+}
+
+interface ErrorResponseType {
   error: string;
 }
 
-interface SuccessResponseProp {
+interface SuccessResponseType {
   _id: string;
   name: string;
   email: string;
   cellphone: string;
   teacher: true;
-  coins: 1;
+  coins: number;
   courses: string[];
-  available_hours: object;
-  available_location: string[];
-  reviews: object[];
-  appointments: object[];
+  available_hours: IAvailableHours;
+  available_locations: string[];
+  reviews: Record<string, unknown>[];
+  appointments: Record<string, unknown>[];
 }
 
 export default async (
   req: NextApiRequest,
-  res: NextApiResponse<ErrorResponseProp | SuccessResponseProp>
+  res: NextApiResponse<ErrorResponseType | SuccessResponseType>
 ): Promise<void> => {
+  // CREATE USER
   if (req.method === 'POST') {
     const {
       name,
@@ -31,9 +39,34 @@ export default async (
       cellphone,
       teacher,
       courses,
+      available_locations,
       available_hours,
-      available_location,
+    }: {
+      name: string;
+      email: string;
+      cellphone: string;
+      teacher: boolean;
+      courses: string[];
+      available_locations: string[];
+      available_hours: IAvailableHours;
     } = req.body;
+
+    // check if available hours is between 7:00 and 20:00
+    let invalidHour = false;
+    for (const dayOfTheWeek in available_hours) {
+      available_hours[dayOfTheWeek].forEach((hour) => {
+        if (hour < 7 || hour > 20) {
+          invalidHour = true;
+          return;
+        }
+      });
+    }
+    if (invalidHour) {
+      res
+        .status(400)
+        .json({ error: 'You cannot teach between 20:00 and 7:00' });
+      return;
+    }
 
     if (!teacher) {
       if (!name || !email || !cellphone) {
@@ -45,10 +78,9 @@ export default async (
         !name ||
         !email ||
         !cellphone ||
-        !teacher ||
         !courses ||
         !available_hours ||
-        !available_location
+        !available_locations
       ) {
         res.status(400).json({ error: 'Missing body parameter' });
         return;
@@ -57,37 +89,29 @@ export default async (
 
     const { db } = await connect();
 
-    const response = await db.collection('users').insertOne({
+    const lowerCaseEmail = email.toLowerCase();
+    const emailAlreadyExists = await db.findOne({ email: lowerCaseEmail });
+    if (emailAlreadyExists) {
+      res
+        .status(400)
+        .json({ error: `E-mail ${lowerCaseEmail} already exists` });
+      return;
+    }
+
+    const response = await db.insertOne({
       name,
-      email,
+      email: lowerCaseEmail,
       cellphone,
       teacher,
       coins: 1,
       courses: courses || [],
       available_hours: available_hours || {},
-      available_location: available_location || [],
+      available_locations: available_locations || [],
       reviews: [],
       appointments: [],
     });
 
     res.status(200).json(response.ops[0]);
-  } else if (req.method === 'GET') {
-    const { email } = req.body;
-    if (!email) {
-      res.status(404).json({ error: 'Missing e-mail on request body' });
-      return;
-    }
-
-    const { db } = await connect();
-
-    const response = await db.collection('users').findOne({ email });
-
-    if (!response) {
-      res.status(404).json({ error: 'User with this e-mail not found' });
-      return;
-    }
-
-    res.status(200).json(response);
   } else {
     res.status(400).json({ error: 'Wrong request method' });
   }
